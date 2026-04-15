@@ -162,6 +162,8 @@ build_release() {
 
   mkdir -p "${DIST_DIR}"
   staging_dir="$(mktemp -d)"
+  output_name="${APP_NAME}-linux-${goarch}.tar.gz"
+  archive_path="${DIST_DIR}/${output_name}"
   trap '[[ -n "${staging_dir:-}" ]] && rm -rf "${staging_dir}"' RETURN
 
   log_section "Build Local Release"
