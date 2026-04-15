@@ -12,12 +12,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/parallels/dhcp-gui/internal/model"
-	"github.com/parallels/dhcp-gui/internal/store"
-	"github.com/parallels/dhcp-gui/internal/validation"
+	"github.com/zivkotp/zivko-dhcp/internal/model"
+	"github.com/zivkotp/zivko-dhcp/internal/store"
+	"github.com/zivkotp/zivko-dhcp/internal/validation"
 )
 
-const SystemSocketPath = "/run/dhcp-gui/dhcp-gui.sock"
+const SystemSocketPath = "/run/zivko-dhcp/zivko-dhcp.sock"
 
 type Server struct {
 	SocketPath string
@@ -34,7 +34,7 @@ func DefaultSocketPath() (string, error) {
 	if runtimeDir == "" {
 		runtimeDir = os.TempDir()
 	}
-	return filepath.Join(runtimeDir, "dhcp-gui.sock"), nil
+	return filepath.Join(runtimeDir, "zivko-dhcp.sock"), nil
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {

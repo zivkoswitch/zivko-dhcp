@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/parallels/dhcp-gui/internal/control"
-	"github.com/parallels/dhcp-gui/internal/dhcpv4"
-	"github.com/parallels/dhcp-gui/internal/model"
-	"github.com/parallels/dhcp-gui/internal/store"
+	"github.com/zivkotp/zivko-dhcp/internal/control"
+	"github.com/zivkotp/zivko-dhcp/internal/dhcpv4"
+	"github.com/zivkotp/zivko-dhcp/internal/model"
+	"github.com/zivkotp/zivko-dhcp/internal/store"
 )
 
 const DefaultListenPort = "6767"

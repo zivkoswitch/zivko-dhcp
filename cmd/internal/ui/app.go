@@ -15,12 +15,12 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 
-	"github.com/parallels/dhcp-gui/internal/control"
-	"github.com/parallels/dhcp-gui/internal/ipcalc"
-	"github.com/parallels/dhcp-gui/internal/model"
-	"github.com/parallels/dhcp-gui/internal/runtime"
-	"github.com/parallels/dhcp-gui/internal/store"
-	"github.com/parallels/dhcp-gui/internal/validation"
+	"github.com/zivkotp/zivko-dhcp/internal/control"
+	"github.com/zivkotp/zivko-dhcp/internal/ipcalc"
+	"github.com/zivkotp/zivko-dhcp/internal/model"
+	"github.com/zivkotp/zivko-dhcp/internal/runtime"
+	"github.com/zivkotp/zivko-dhcp/internal/store"
+	"github.com/zivkotp/zivko-dhcp/internal/validation"
 )
 
 type App struct {
@@ -1013,7 +1013,7 @@ func (a *App) restartSystemdService() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "pkexec", "systemctl", "restart", "dhcp-gui-daemon.service")
+	cmd := exec.CommandContext(ctx, "pkexec", "systemctl", "restart", "zivko-dhcp-daemon.service")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		message := strings.TrimSpace(string(output))
@@ -1051,7 +1051,7 @@ func (a *App) systemdServiceActive() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "systemctl", "is-active", "--quiet", "dhcp-gui-daemon.service")
+	cmd := exec.CommandContext(ctx, "systemctl", "is-active", "--quiet", "zivko-dhcp-daemon.service")
 	return cmd.Run() == nil
 }
 

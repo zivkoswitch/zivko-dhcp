@@ -5,8 +5,8 @@ import (
 	"net"
 	"sort"
 
-	"github.com/parallels/dhcp-gui/internal/ipcalc"
-	"github.com/parallels/dhcp-gui/internal/model"
+	"github.com/zivkotp/zivko-dhcp/internal/ipcalc"
+	"github.com/zivkotp/zivko-dhcp/internal/model"
 )
 
 func ValidateConfig(cfg model.Config) error {

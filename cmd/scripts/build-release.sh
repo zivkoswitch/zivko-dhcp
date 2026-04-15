@@ -5,8 +5,8 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 readonly DIST_DIR="${REPO_DIR}/dist"
-readonly APP_NAME="dhcp-gui"
-readonly SERVICE_NAME="dhcp-gui-daemon.service"
+readonly APP_NAME="zivko-dhcp"
+readonly SERVICE_NAME="zivko-dhcp-daemon.service"
 readonly INSTALLER_NAME="install.sh"
 
 if [[ -t 1 ]]; then

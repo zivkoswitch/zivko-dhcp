@@ -4,9 +4,14 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+if [[ -f "${REPO_DIR}/cmd/go.mod" && -f "${REPO_DIR}/cmd/cmd/gui/main.go" ]]; then
+  readonly SOURCE_DIR="${REPO_DIR}/cmd"
+else
+  readonly SOURCE_DIR="${REPO_DIR}"
+fi
 readonly DIST_DIR="${REPO_DIR}/dist"
-readonly APP_NAME="dhcp-gui"
-readonly SERVICE_NAME="dhcp-gui-daemon.service"
+readonly APP_NAME="zivko-dhcp"
+readonly SERVICE_NAME="zivko-dhcp-daemon.service"
 readonly INSTALLER_NAME="install.sh"
 
 if [[ -t 1 ]]; then
@@ -164,7 +169,7 @@ build_release() {
   log_step "Target architecture: ${goarch}"
   log_step "C compiler: ${cc}"
 
-  cd "${REPO_DIR}"
+  cd "${SOURCE_DIR}"
 
   log_step "Building GUI binary"
   CGO_ENABLED=1 CC="${cc}" GOOS=linux GOARCH="${goarch}" go build \
@@ -173,9 +178,9 @@ build_release() {
     ./cmd/gui
   log_success "GUI binary built"
 
-  cp "${REPO_DIR}/README.md" "${staging_dir}/README.md"
-  cp "${REPO_DIR}/packaging/systemd/${SERVICE_NAME}" "${staging_dir}/${SERVICE_NAME}"
-  cp "${REPO_DIR}/scripts/install.sh" "${staging_dir}/${INSTALLER_NAME}"
+  cp "${SOURCE_DIR}/README.md" "${staging_dir}/README.md"
+  cp "${SOURCE_DIR}/packaging/systemd/${SERVICE_NAME}" "${staging_dir}/${SERVICE_NAME}"
+  cp "${SOURCE_DIR}/scripts/install.sh" "${staging_dir}/${INSTALLER_NAME}"
   chmod +x "${staging_dir}/${INSTALLER_NAME}"
 
   log_step "Packaging release archive"

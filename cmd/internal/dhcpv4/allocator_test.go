@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/parallels/dhcp-gui/internal/model"
-	"github.com/parallels/dhcp-gui/internal/validation"
+	"github.com/zivkotp/zivko-dhcp/internal/model"
+	"github.com/zivkotp/zivko-dhcp/internal/validation"
 )
 
 func TestAllocatorPrefersReservation(t *testing.T) {

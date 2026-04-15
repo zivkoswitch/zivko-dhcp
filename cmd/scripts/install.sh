@@ -5,8 +5,8 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 readonly DEFAULT_BIN_DIR="/usr/local/bin"
-readonly APP_NAME="dhcp-gui"
-readonly SERVICE_NAME="dhcp-gui-daemon.service"
+readonly APP_NAME="zivko-dhcp"
+readonly SERVICE_NAME="zivko-dhcp-daemon.service"
 readonly SYSTEMD_DIR="/etc/systemd/system"
 
 if [[ -t 1 ]]; then
@@ -205,10 +205,10 @@ setup_systemd_service() {
     return
   fi
   require_command sudo
-  run_cmd "Creating daemon state directory" sudo install -d /var/lib/dhcp-gui
+  run_cmd "Creating daemon state directory" sudo install -d /var/lib/zivko-dhcp
   run_cmd "Reloading systemd" sudo systemctl daemon-reload
-  run_cmd "Enabling daemon service" sudo systemctl enable dhcp-gui-daemon.service
-  run_cmd "Restarting daemon service" sudo systemctl restart dhcp-gui-daemon.service
+  run_cmd "Enabling daemon service" sudo systemctl enable zivko-dhcp-daemon.service
+  run_cmd "Restarting daemon service" sudo systemctl restart zivko-dhcp-daemon.service
 }
 
 main() {

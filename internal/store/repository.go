@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/parallels/dhcp-gui/internal/model"
-	"github.com/parallels/dhcp-gui/internal/validation"
+	"github.com/zivkotp/zivko-dhcp/internal/model"
+	"github.com/zivkotp/zivko-dhcp/internal/validation"
 )
 
 type Repository interface {
@@ -103,7 +103,7 @@ func DefaultConfigPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve user config dir: %w", err)
 	}
-	return filepath.Join(configDir, "dhcp-gui", "config.json"), nil
+	return filepath.Join(configDir, "zivko-dhcp", "config.json"), nil
 }
 
 func (r *FileRepository) Load(_ context.Context) (model.Config, error) {

@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/parallels/dhcp-gui/internal/control"
-	"github.com/parallels/dhcp-gui/internal/runtime"
+	"github.com/zivkotp/zivko-dhcp/internal/control"
+	"github.com/zivkotp/zivko-dhcp/internal/runtime"
 )
 
 func main() {
@@ -13,12 +13,12 @@ func main() {
 	defer stop()
 
 	if err := runtime.RunHeadless(ctx, runtime.Options{
-		ConfigPath:    envOrDefault("DHCP_GUI_CONFIG_PATH", ""),
-		ListenAddr:    os.Getenv("DHCP_GUI_LISTEN_ADDR"),
+		ConfigPath:    envOrDefault("ZIVKO_DHCP_CONFIG_PATH", ""),
+		ListenAddr:    os.Getenv("ZIVKO_DHCP_LISTEN_ADDR"),
 		DefaultListen: ":67",
-		ServerIP:      os.Getenv("DHCP_GUI_SERVER_IP"),
-		InterfaceName: envOrDefault("DHCP_GUI_INTERFACE", ""),
-		ControlSocket: envOrDefault("DHCP_GUI_CONTROL_SOCKET", control.SystemSocketPath),
+		ServerIP:      os.Getenv("ZIVKO_DHCP_SERVER_IP"),
+		InterfaceName: envOrDefault("ZIVKO_DHCP_INTERFACE", ""),
+		ControlSocket: envOrDefault("ZIVKO_DHCP_CONTROL_SOCKET", control.SystemSocketPath),
 		DefaultSocket: control.SystemSocketPath,
 		Logger:        log.New(os.Stdout, "dhcpd: ", log.LstdFlags),
 	}); err != nil {

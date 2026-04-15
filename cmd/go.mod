@@ -1,4 +1,4 @@
-module github.com/parallels/dhcp-gui
+module github.com/zivkotp/zivko-dhcp
 
 go 1.23.0
 

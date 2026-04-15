@@ -6,10 +6,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/parallels/dhcp-gui/internal/control"
-	"github.com/parallels/dhcp-gui/internal/runtime"
-	"github.com/parallels/dhcp-gui/internal/store"
-	"github.com/parallels/dhcp-gui/internal/ui"
+	"github.com/zivkotp/zivko-dhcp/internal/control"
+	"github.com/zivkotp/zivko-dhcp/internal/runtime"
+	"github.com/zivkotp/zivko-dhcp/internal/store"
+	"github.com/zivkotp/zivko-dhcp/internal/ui"
 )
 
 var version = "dev"
@@ -17,11 +17,11 @@ var version = "dev"
 func main() {
 	headless := flag.Bool("headless", false, "run DHCP server without GUI")
 	guiOnly := flag.Bool("gui-only", false, "run GUI without starting an embedded DHCP server")
-	configPath := flag.String("config-path", os.Getenv("DHCP_GUI_CONFIG_PATH"), "path to persistent config file")
-	listenAddr := flag.String("listen-addr", os.Getenv("DHCP_GUI_LISTEN_ADDR"), "UDP listen address for the DHCP server")
-	serverIP := flag.String("server-ip", os.Getenv("DHCP_GUI_SERVER_IP"), "server identifier IP for DHCP replies")
-	interfaceName := flag.String("interface", os.Getenv("DHCP_GUI_INTERFACE"), "network interface to bind the DHCP server to")
-	controlSocket := flag.String("control-socket", os.Getenv("DHCP_GUI_CONTROL_SOCKET"), "unix socket path for the local control API")
+	configPath := flag.String("config-path", os.Getenv("ZIVKO_DHCP_CONFIG_PATH"), "path to persistent config file")
+	listenAddr := flag.String("listen-addr", os.Getenv("ZIVKO_DHCP_LISTEN_ADDR"), "UDP listen address for the DHCP server")
+	serverIP := flag.String("server-ip", os.Getenv("ZIVKO_DHCP_SERVER_IP"), "server identifier IP for DHCP replies")
+	interfaceName := flag.String("interface", os.Getenv("ZIVKO_DHCP_INTERFACE"), "network interface to bind the DHCP server to")
+	controlSocket := flag.String("control-socket", os.Getenv("ZIVKO_DHCP_CONTROL_SOCKET"), "unix socket path for the local control API")
 	flag.Parse()
 
 	opts := runtime.Options{

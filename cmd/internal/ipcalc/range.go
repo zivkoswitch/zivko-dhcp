@@ -6,7 +6,7 @@ import (
 	"net"
 	"sort"
 
-	"github.com/parallels/dhcp-gui/internal/model"
+	"github.com/zivkotp/zivko-dhcp/internal/model"
 )
 
 func NormalizeIPv4(ip net.IP) (net.IP, error) {

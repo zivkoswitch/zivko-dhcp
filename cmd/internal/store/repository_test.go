@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/parallels/dhcp-gui/internal/model"
+	"github.com/zivkotp/zivko-dhcp/internal/model"
 )
 
 func TestFileRepositorySeedsMissingConfig(t *testing.T) {

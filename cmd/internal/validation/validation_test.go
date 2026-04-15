@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/parallels/dhcp-gui/internal/model"
+	"github.com/zivkotp/zivko-dhcp/internal/model"
 )
 
 func ip(raw string) net.IP {
