@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/zivkotp/zivko-dhcp/internal/model"
-	"github.com/zivkotp/zivko-dhcp/internal/validation"
 )
 
 type Repository interface {
@@ -99,11 +98,14 @@ func NewFileRepository(path string) (*FileRepository, error) {
 }
 
 func DefaultConfigPath() (string, error) {
-	configDir, err := os.UserConfigDir()
+	executablePath, err := os.Executable()
 	if err != nil {
-		return "", fmt.Errorf("resolve user config dir: %w", err)
+		return "", fmt.Errorf("resolve executable path: %w", err)
 	}
-	return filepath.Join(configDir, "zivko-dhcp", "config.json"), nil
+	if resolvedPath, err := filepath.EvalSymlinks(executablePath); err == nil {
+		executablePath = resolvedPath
+	}
+	return filepath.Join(filepath.Dir(executablePath), "config.json"), nil
 }
 
 func (r *FileRepository) Load(_ context.Context) (model.Config, error) {
@@ -371,121 +373,10 @@ func parseIPs(raw []string) []net.IP {
 
 func seedConfig() model.Config {
 	return model.Config{
-		Runtime: model.RuntimeSettings{
-			ListenAddr:    ":6767",
-			ServerIP:      "0.0.0.0",
-			InterfaceName: "",
-			ControlSocket: "",
-		},
-		Pools: []model.Pool{
-			{
-				ID:             "pool-lan",
-				Name:           "LAN",
-				Subnet:         mustCIDR("192.168.10.0/24"),
-				DefaultGateway: mustIP("192.168.10.1"),
-				DNSServers:     []net.IP{mustIP("192.168.10.1"), mustIP("1.1.1.1")},
-				DomainName:     "lan.example.internal",
-				Range: model.IPv4Range{
-					Start: mustIP("192.168.10.50"),
-					End:   mustIP("192.168.10.180"),
-				},
-			},
-			{
-				ID:             "pool-lab",
-				Name:           "Lab",
-				Subnet:         mustCIDR("192.168.20.0/24"),
-				DefaultGateway: mustIP("192.168.20.1"),
-				DNSServers:     []net.IP{mustIP("192.168.20.1"), mustIP("8.8.8.8")},
-				DomainName:     "lab.example.internal",
-				Range: model.IPv4Range{
-					Start: mustIP("192.168.20.20"),
-					End:   mustIP("192.168.20.120"),
-				},
-			},
-		},
-		Exclusions: []model.Exclusion{
-			{
-				ID:     "ex-lan-printers",
-				PoolID: "pool-lan",
-				Range: model.IPv4Range{
-					Start: mustIP("192.168.10.60"),
-					End:   mustIP("192.168.10.69"),
-				},
-			},
-			{
-				ID:     "ex-lab-servers",
-				PoolID: "pool-lab",
-				Range: model.IPv4Range{
-					Start: mustIP("192.168.20.30"),
-					End:   mustIP("192.168.20.35"),
-				},
-			},
-		},
-		Reservations: []model.Reservation{
-			{
-				ID:        "res-lan-printer",
-				PoolID:    "pool-lan",
-				Hostname:  "lagerdrucker",
-				MAC:       "52:54:00:12:34:56",
-				IPAddress: mustIP("192.168.10.10"),
-			},
-			{
-				ID:        "res-lab-nas",
-				PoolID:    "pool-lab",
-				Hostname:  "lab-nas",
-				MAC:       "52:54:00:aa:bb:cc",
-				IPAddress: mustIP("192.168.20.10"),
-			},
-		},
-		Leases: []model.Lease{
-			{
-				ID:         "lease-lan-1",
-				PoolID:     "pool-lan",
-				Hostname:   "thinkpad-buero",
-				MAC:        "00:11:22:33:44:55",
-				IPAddress:  mustIP("192.168.10.81"),
-				Duration:   12 * time.Hour,
-				ExpiresAt:  time.Now().Add(7*time.Hour + 20*time.Minute),
-				Vendor:     "Lenovo",
-				ClientID:   "01:00:11:22:33:44:55",
-				LastSeenAt: time.Now().Add(-3 * time.Minute),
-			},
-			{
-				ID:         "lease-lan-2",
-				PoolID:     "pool-lan",
-				Hostname:   "scanner-lager",
-				MAC:        "66:55:44:33:22:11",
-				IPAddress:  mustIP("192.168.10.92"),
-				Duration:   12 * time.Hour,
-				ExpiresAt:  time.Now().Add(2*time.Hour + 5*time.Minute),
-				Vendor:     "Brother",
-				ClientID:   "scanner-92",
-				LastSeenAt: time.Now().Add(-40 * time.Second),
-			},
-			{
-				ID:         "lease-lab-1",
-				PoolID:     "pool-lab",
-				Hostname:   "ubuntu-testbox",
-				MAC:        "de:ad:be:ef:20:01",
-				IPAddress:  mustIP("192.168.20.80"),
-				Duration:   8 * time.Hour,
-				ExpiresAt:  time.Now().Add(6*time.Hour + 45*time.Minute),
-				Vendor:     "Intel NIC",
-				ClientID:   "lab-client-01",
-				LastSeenAt: time.Now().Add(-90 * time.Second),
-			},
-		},
+		Runtime:      model.RuntimeSettings{},
+		Pools:        []model.Pool{},
+		Exclusions:   []model.Exclusion{},
+		Reservations: []model.Reservation{},
+		Leases:       []model.Lease{},
 	}
-}
-
-func mustIP(raw string) net.IP {
-	ip := net.ParseIP(raw)
-	if ip == nil {
-		panic("invalid IP in seed data: " + raw)
-	}
-	return ip
-}
-
-func mustCIDR(raw string) *net.IPNet {
-	return validation.MustCIDR(raw)
 }

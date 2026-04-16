@@ -11,8 +11,6 @@ else
 fi
 readonly DIST_DIR="${REPO_DIR}/dist"
 readonly APP_NAME="zivko-dhcp"
-readonly SERVICE_NAME="zivko-dhcp-daemon.service"
-readonly INSTALLER_NAME="install.sh"
 
 if [[ -t 1 ]]; then
   readonly C_RESET=$'\033[0m'
@@ -46,14 +44,15 @@ log_error() {
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/build-release.sh [--version VERSION] [--arch amd64|arm64 | --all]
+Usage: ./scripts/build-release.sh [--version VERSION] [--os linux|windows] [--arch amd64|arm64 | --all]
 
-Builds a local Linux release artifact under dist/.
+Builds a local release artifact under dist/.
 
 Options:
   --version VERSION  Release version label. Default: dev
+  --os OS            Target operating system. Default: current Go OS
   --arch ARCH        Target architecture. Default: current Go architecture
-  --all              Build release artifacts for all supported architectures
+  --all              Build release artifacts for all supported targets
   -h, --help         Show this help text.
 EOF
 }
@@ -67,6 +66,7 @@ require_command() {
 
 main() {
   local version="dev"
+  local os=""
   local arch=""
   local build_all="false"
 
@@ -81,6 +81,11 @@ main() {
         shift
         [[ $# -gt 0 ]] || { log_error "--arch requires a value"; exit 1; }
         arch="$1"
+        ;;
+      --os)
+        shift
+        [[ $# -gt 0 ]] || { log_error "--os requires a value"; exit 1; }
+        os="$1"
         ;;
       --all)
         build_all="true"
@@ -99,103 +104,114 @@ main() {
   done
 
   require_command go
-  require_command tar
   require_command sha256sum
 
-  if [[ "${build_all}" == "true" && -n "${arch}" ]]; then
-    log_error "--arch and --all cannot be used together"
+  if [[ "${build_all}" == "true" && ( -n "${arch}" || -n "${os}" ) ]]; then
+    log_error "--os/--arch and --all cannot be used together"
     exit 1
   fi
 
   if [[ "${build_all}" == "true" ]]; then
-    build_release "${version}" amd64
-    build_release "${version}" arm64
+    build_release "${version}" linux amd64
+    build_release "${version}" linux arm64
+    build_release "${version}" windows amd64
     return
+  fi
+
+  if [[ -z "${os}" ]]; then
+    os="$(go env GOOS)"
   fi
 
   if [[ -z "${arch}" ]]; then
     arch="$(go env GOARCH)"
   fi
 
-  build_release "${version}" "${arch}"
+  build_release "${version}" "${os}" "${arch}"
 }
 
 build_release() {
   local version="$1"
-  local arch="$2"
+  local target_os="$2"
+  local arch="$3"
+  local host_os=""
   local host_arch=""
   local goarch=""
-  local staging_dir=""
   local output_name=""
-  local archive_path=""
+  local artifact_path=""
+  local binary_name=""
   local cc=""
 
-  case "${arch}" in
-    amd64|arm64)
+  case "${target_os}:${arch}" in
+    linux:amd64|linux:arm64|windows:amd64)
       goarch="${arch}"
       ;;
     *)
-      log_error "Unsupported architecture: ${arch}"
+      log_error "Unsupported target: ${target_os}/${arch}"
       exit 1
       ;;
   esac
 
+  host_os="$(go env GOOS)"
   host_arch="$(go env GOARCH)"
-  if [[ "${goarch}" == "${host_arch}" ]]; then
+
+  case "${target_os}" in
+    linux)
+      binary_name="${APP_NAME}"
+      ;;
+    windows)
+      binary_name="${APP_NAME}.exe"
+      ;;
+  esac
+
+  if [[ "${target_os}" == "${host_os}" && "${goarch}" == "${host_arch}" ]]; then
     cc="${CC:-cc}"
   else
-    case "${goarch}" in
-      amd64)
+    case "${target_os}:${goarch}" in
+      linux:amd64)
         cc="${CC_AMD64:-x86_64-linux-gnu-gcc}"
         ;;
-      arm64)
+      linux:arm64)
         cc="${CC_ARM64:-aarch64-linux-gnu-gcc}"
+        ;;
+      windows:amd64)
+        cc="${CC_WINDOWS_AMD64:-x86_64-w64-mingw32-gcc}"
         ;;
     esac
   fi
 
   if ! command -v "${cc}" >/dev/null 2>&1; then
-    log_error "Cross-Compiler not found for ${goarch}: ${cc}"
-    log_error "Set the appropriate compiler in CC, CC_AMD64, or CC_ARM64 before using --all."
+    log_error "Cross-Compiler not found for ${target_os}/${goarch}: ${cc}"
+    log_error "Set the appropriate compiler in CC, CC_AMD64, CC_ARM64, or CC_WINDOWS_AMD64 before building."
     exit 1
   fi
 
   mkdir -p "${DIST_DIR}"
-  staging_dir="$(mktemp -d)"
-  output_name="${APP_NAME}-linux-${goarch}.tar.gz"
-  archive_path="${DIST_DIR}/${output_name}"
-  trap '[[ -n "${staging_dir:-}" ]] && rm -rf "${staging_dir}"' RETURN
+  output_name="${APP_NAME}-${target_os}-${goarch}"
+  if [[ "${target_os}" == "windows" ]]; then
+    output_name="${output_name}.exe"
+  fi
+  artifact_path="${DIST_DIR}/${output_name}"
 
   log_section "Build Local Release"
   log_step "Version label: ${version}"
+  log_step "Target OS: ${target_os}"
   log_step "Target architecture: ${goarch}"
   log_step "C compiler: ${cc}"
 
   cd "${SOURCE_DIR}"
 
   log_step "Building GUI binary"
-  CGO_ENABLED=1 CC="${cc}" GOOS=linux GOARCH="${goarch}" go build \
+  CGO_ENABLED=1 CC="${cc}" GOOS="${target_os}" GOARCH="${goarch}" go build \
     -ldflags "-X main.version=${version}" \
-    -o "${staging_dir}/${APP_NAME}" \
+    -o "${artifact_path}" \
     ./cmd/gui
-  log_success "GUI binary built"
-
-  cp "${SOURCE_DIR}/README.md" "${staging_dir}/README.md"
-  cp "${SOURCE_DIR}/packaging/systemd/${SERVICE_NAME}" "${staging_dir}/${SERVICE_NAME}"
-  cp "${SOURCE_DIR}/scripts/install.sh" "${staging_dir}/${INSTALLER_NAME}"
-  chmod +x "${staging_dir}/${INSTALLER_NAME}"
-
-  log_step "Packaging release archive"
-  tar -czf "${archive_path}" -C "${staging_dir}" "${APP_NAME}" "${SERVICE_NAME}" "${INSTALLER_NAME}" README.md
-  log_success "Archive created: ${archive_path}"
+  log_success "Binary built: ${artifact_path}"
 
   log_step "Writing checksum"
-  sha256sum "${archive_path}" > "${archive_path}.sha256"
-  log_success "Checksum written: ${archive_path}.sha256"
+  sha256sum "${artifact_path}" > "${artifact_path}.sha256"
+  log_success "Checksum written: ${artifact_path}.sha256"
 
-  printf '%sArtifact:%s %s\n' "${C_BOLD}" "${C_RESET}" "${archive_path}"
-  rm -rf "${staging_dir}"
-  trap - RETURN
+  printf '%sArtifact:%s %s\n' "${C_BOLD}" "${C_RESET}" "${artifact_path}"
 }
 
 main "$@"

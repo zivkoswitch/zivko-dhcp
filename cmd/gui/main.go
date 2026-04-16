@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	goruntime "runtime"
 
 	"github.com/zivkotp/zivko-dhcp/internal/control"
 	"github.com/zivkotp/zivko-dhcp/internal/runtime"
@@ -21,7 +22,7 @@ func main() {
 	listenAddr := flag.String("listen-addr", os.Getenv("ZIVKO_DHCP_LISTEN_ADDR"), "UDP listen address for the DHCP server")
 	serverIP := flag.String("server-ip", os.Getenv("ZIVKO_DHCP_SERVER_IP"), "server identifier IP for DHCP replies")
 	interfaceName := flag.String("interface", os.Getenv("ZIVKO_DHCP_INTERFACE"), "network interface to bind the DHCP server to")
-	controlSocket := flag.String("control-socket", os.Getenv("ZIVKO_DHCP_CONTROL_SOCKET"), "unix socket path for the local control API")
+	controlSocket := flag.String("control-socket", os.Getenv("ZIVKO_DHCP_CONTROL_SOCKET"), "local control endpoint for the embedded API")
 	flag.Parse()
 
 	opts := runtime.Options{
@@ -37,6 +38,9 @@ func main() {
 	defer stop()
 
 	if *headless {
+		if goruntime.GOOS == "windows" {
+			log.Fatal("headless mode is not supported on Windows; run the GUI build instead")
+		}
 		opts.DefaultListen = ":67"
 		opts.DefaultSocket = control.SystemSocketPath
 		if err := runtime.RunHeadless(ctx, opts); err != nil {
@@ -58,7 +62,7 @@ func main() {
 	var embeddedStop context.CancelFunc
 	embeddedOpts := opts
 	if startEmbedded {
-		opts.DefaultListen = ":6767"
+		opts.DefaultListen = ":67"
 		opts.DefaultSocket = checkSocket
 		cancelEmbedded, err := runtime.StartEmbeddedServices(ctx, opts)
 		if err != nil {

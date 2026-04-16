@@ -1,18 +1,20 @@
 # DHCP GUI
 
-Native Ubuntu desktop application in Go with a native DHCP backend written in Go.
+Native desktop application in Go with a native DHCP backend written in Go.
 
 The project is operated through a single binary:
 
 - `zivko-dhcp`
 
-The same binary supports multiple modes:
+The same binary supports multiple modes on Linux:
 
 - default: GUI plus automatic daemon detection
 - `--headless`: DHCP/control backend without GUI
 - `--gui-only`: GUI without starting an embedded backend
 
-If no daemon is already reachable on the control socket, the default GUI mode starts an embedded DHCP backend for as long as the window stays open. Closing the window stops the embedded backend again.
+If no backend is already reachable on the local control endpoint, the default GUI mode starts an embedded DHCP backend for as long as the window stays open. Closing the window stops the embedded backend again.
+
+On Windows, the application is GUI-only. There is no service installation and no supported `--headless` mode. The DHCP server runs embedded in the GUI process.
 
 ## Current DHCP Capability
 
@@ -28,9 +30,9 @@ The current Go DHCP implementation supports:
 - pruning of expired leases
 - router, DNS server, domain name, subnet mask and lease-time options
 
-This is the current production-targeted baseline for single-server DHCP on Ubuntu. More advanced scenarios like relay-agent handling or multi-interface policy routing are not fully implemented yet.
+This is the current production-targeted baseline for single-server DHCP. More advanced scenarios like relay-agent handling or multi-interface policy routing are not fully implemented yet.
 
-## Production Overview
+## Linux Production Overview
 
 The intended production layout is:
 
@@ -39,7 +41,7 @@ The intended production layout is:
 - Runtime socket: `/run/zivko-dhcp/zivko-dhcp.sock`
 - Persistent config: `/var/lib/zivko-dhcp/config.json`
 
-The GUI talks to the backend over the local Unix socket. In service mode, systemd starts the same `zivko-dhcp` binary with `--headless`.
+On Linux, the GUI talks to the backend over the local control socket. In service mode, systemd starts the same `zivko-dhcp` binary with `--headless`.
 
 Recommended production mode:
 
@@ -47,70 +49,43 @@ Recommended production mode:
 - let systemd run `zivko-dhcp --headless`
 - use `zivko-dhcp --gui-only` on admin desktops that should only manage an already running service
 
-## Build A Release Artifact
+## Build Release Artifacts
 
 From the repository root:
 
 ```bash
-./scripts/build-release.sh --version v0.1.0
+./scripts/build-release.sh --version v0.1.0 --os linux --arch amd64
 ```
 
-This creates a release archive in `dist/` containing:
+Linux artifacts now contain only the binary:
 
-- `zivko-dhcp`
-- `zivko-dhcp-daemon.service`
-- `install.sh`
-- `README.md`
+- `dist/zivko-dhcp-linux-amd64`
 
-The release archive is self-contained. The bundled `install.sh` is intended to be executed from the extracted archive directory.
-
-## Install From The Release Artifact
-
-Extract the archive and run the bundled installer:
+Windows artifacts can be built as:
 
 ```bash
-tar -xzf zivko-dhcp-linux-arm64.tar.gz
-cd extracted-release-directory
-./install.sh
+./scripts/build-release.sh --version v0.1.0 --os windows --arch amd64
 ```
 
-The bundled `install.sh` is part of the release artifact and is the recommended production installation path.
+Windows artifacts now contain only the binary:
 
-It installs:
+- `dist/zivko-dhcp-windows-amd64.exe`
 
-- `/usr/local/bin/zivko-dhcp`
-- `/etc/systemd/system/zivko-dhcp-daemon.service`
+For every artifact, the build also writes a `.sha256` checksum file next to the binary.
 
-Then it:
+## Linux Service Example
 
-- creates `/var/lib/zivko-dhcp`
-- reloads systemd
-- enables `zivko-dhcp-daemon.service`
-- restarts the daemon service
-
-## Installer Options
-
-Install from a specific tarball:
+An example systemd unit file is kept in the repository:
 
 ```bash
-./install.sh --artifact ./zivko-dhcp-linux-arm64.tar.gz
+examples/zivko-dhcp-daemon.service
 ```
 
-Install binaries into a different directory:
-
-```bash
-./install.sh --bin-dir ~/.local/bin
-```
-
-Skip GUI runtime packages:
-
-```bash
-./install.sh --skip-packages
-```
+Copy it manually if you want to run the backend as a system service.
 
 ## Start The Application
 
-After installation, the daemon should already be enabled via systemd.
+Linux:
 
 Start the GUI:
 
@@ -142,6 +117,12 @@ View daemon logs:
 sudo journalctl -u zivko-dhcp-daemon.service -f
 ```
 
+Windows:
+
+```bash
+zivko-dhcp.exe
+```
+
 ## Example Modes
 
 Desktop mode with automatic embedded backend if no service is available:
@@ -156,7 +137,7 @@ Desktop mode without starting a backend:
 zivko-dhcp --gui-only
 ```
 
-Headless backend mode:
+Headless backend mode on Linux:
 
 ```bash
 zivko-dhcp --headless
@@ -171,10 +152,11 @@ zivko-dhcp --headless --interface enp2s0
 ## Operational Notes
 
 - The daemon service is configured for UDP port `67`.
-- The GUI uses the daemon control socket at `/run/zivko-dhcp/zivko-dhcp.sock`.
+- On Linux, the GUI uses the daemon control socket at `/run/zivko-dhcp/zivko-dhcp.sock`.
+- On Windows, the GUI uses a local control endpoint at `127.0.0.1:6768`.
 - Without `--gui-only`, the GUI auto-detects whether a backend is already reachable. If not, it starts an embedded backend in-process.
 - The GUI can still keep a local cache, but the backend is the authoritative runtime component.
-- The current implementation is intended for Ubuntu Linux.
+- Linux service management is only available on Linux.
 
 ## Maintainer Workflow
 

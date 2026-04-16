@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	goruntime "runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -71,7 +72,7 @@ func (a *App) Run() error {
 	configButton := widget.NewButton("Config JSON", func() {
 		a.openConfigWindow()
 	})
-	restartButton := widget.NewButton("Service neustarten", func() {
+	restartButton := widget.NewButton("Server neu starten", func() {
 		a.restartService()
 	})
 
@@ -606,7 +607,7 @@ func (a *App) openSettingsWindow() {
 		defaultSocketPath = ""
 	}
 
-	portEntry := widget.NewSelectEntry([]string{"67", runtime.DefaultListenPort})
+	portEntry := widget.NewSelectEntry([]string{runtime.DefaultListenPort})
 	portEntry.SetText(runtime.ListenPort(a.cfg.Runtime.ListenAddr))
 	portEntry.SetPlaceHolder(runtime.DefaultListenPort)
 
@@ -781,7 +782,7 @@ func (a *App) openSettingsWindow() {
 		}
 	})
 
-	info := widget.NewLabel("Diese Werte werden in der Config-Datei gespeichert. Interface, Server-IP und Socket können automatisch ermittelt werden. Flags oder Umgebungsvariablen haben weiterhin Vorrang.")
+	info := widget.NewLabel("Diese Werte werden in der Config-Datei gespeichert. Interface, Server-IP und der lokale Control-Endpunkt können automatisch ermittelt werden. Flags oder Umgebungsvariablen haben weiterhin Vorrang.")
 	info.Wrapping = fyne.TextWrapWord
 
 	form := widget.NewForm(
@@ -791,8 +792,8 @@ func (a *App) openSettingsWindow() {
 		widget.NewFormItem("", interfaceInfoLabel),
 		widget.NewFormItem("Server-IP Modus", serverIPMode),
 		widget.NewFormItem("Server IP", serverIPEntry),
-		widget.NewFormItem("Socket Modus", socketMode),
-		widget.NewFormItem("Control Socket", controlSocketEntry),
+		widget.NewFormItem("Endpoint Modus", socketMode),
+		widget.NewFormItem("Control Endpoint", controlSocketEntry),
 		widget.NewFormItem("", socketInfoLabel),
 	)
 
@@ -999,6 +1000,12 @@ func (a *App) updateDaemonStatus(status string) {
 }
 
 func (a *App) restartService() {
+	if goruntime.GOOS == "windows" {
+		if err := a.restartEmbeddedDaemon(); err != nil {
+			a.setStatusError(err)
+		}
+		return
+	}
 	if a.systemdServiceActive() {
 		a.restartSystemdService()
 		return
@@ -1048,6 +1055,9 @@ func (a *App) restartEmbeddedDaemon() error {
 }
 
 func (a *App) systemdServiceActive() bool {
+	if goruntime.GOOS == "windows" {
+		return false
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 

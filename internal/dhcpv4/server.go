@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/zivkotp/zivko-dhcp/internal/model"
@@ -59,23 +57,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 
 func (s *Server) listenPacket(addr string) (net.PacketConn, error) {
 	listenConfig := net.ListenConfig{
-		Control: func(network, address string, c syscall.RawConn) error {
-			var controlErr error
-			err := c.Control(func(fd uintptr) {
-				controlErr = syscall.SetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_BROADCAST, 1)
-				if controlErr != nil {
-					return
-				}
-				_ = syscall.SetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
-				if s.InterfaceName != "" && runtime.GOOS == "linux" {
-					controlErr = syscall.SetsockoptString(int(fd), syscall.SOL_SOCKET, syscall.SO_BINDTODEVICE, s.InterfaceName)
-				}
-			})
-			if err != nil {
-				return err
-			}
-			return controlErr
-		},
+		Control: s.listenerControl(),
 	}
 	return listenConfig.ListenPacket(context.Background(), "udp4", addr)
 }

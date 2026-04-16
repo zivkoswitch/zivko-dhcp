@@ -6,10 +6,8 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/zivkotp/zivko-dhcp/internal/control"
@@ -18,7 +16,7 @@ import (
 	"github.com/zivkotp/zivko-dhcp/internal/store"
 )
 
-const DefaultListenPort = "6767"
+const DefaultListenPort = "67"
 
 type Options struct {
 	ConfigPath    string
@@ -124,10 +122,6 @@ func DaemonAvailable(socketPath string) bool {
 	defer cancel()
 	_, err := client.Health(ctx)
 	return err == nil
-}
-
-func SignalContext() (context.Context, context.CancelFunc) {
-	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 }
 
 func applyRuntimeConfig(opts Options, runtimeCfg model.RuntimeSettings) Options {

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"time"
 
 	"github.com/zivkotp/zivko-dhcp/internal/model"
@@ -17,7 +18,7 @@ import (
 	"github.com/zivkotp/zivko-dhcp/internal/validation"
 )
 
-const SystemSocketPath = "/run/zivko-dhcp/zivko-dhcp.sock"
+var SystemSocketPath = systemControlEndpoint()
 
 type Server struct {
 	SocketPath string
@@ -27,6 +28,9 @@ type Server struct {
 }
 
 func DefaultSocketPath() (string, error) {
+	if goruntime.GOOS == "windows" {
+		return SystemSocketPath, nil
+	}
 	if info, err := os.Stat(filepath.Dir(SystemSocketPath)); err == nil && info.IsDir() {
 		return SystemSocketPath, nil
 	}
@@ -47,18 +51,23 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		socketPath = path
 	}
 
-	if err := os.MkdirAll(filepath.Dir(socketPath), 0o755); err != nil {
-		return err
+	network := controlNetwork(socketPath)
+	if network == "unix" {
+		if err := os.MkdirAll(filepath.Dir(socketPath), 0o755); err != nil {
+			return err
+		}
+		_ = os.Remove(socketPath)
 	}
-	_ = os.Remove(socketPath)
 
-	listener, err := net.Listen("unix", socketPath)
+	listener, err := net.Listen(network, socketPath)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		_ = listener.Close()
-		_ = os.Remove(socketPath)
+		if network == "unix" {
+			_ = os.Remove(socketPath)
+		}
 	}()
 
 	mux := http.NewServeMux()
@@ -183,14 +192,7 @@ func (c *Client) send(ctx context.Context, method, path string, payload any, out
 		}
 	}
 
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				var d net.Dialer
-				return d.DialContext(ctx, "unix", socketPath)
-			},
-		},
-	}
+	httpClient := &http.Client{Transport: controlTransport(socketPath)}
 
 	var bodyReader io.Reader
 	if payload != nil {
@@ -201,7 +203,7 @@ func (c *Client) send(ctx context.Context, method, path string, payload any, out
 		bodyReader = bytes.NewReader(data)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, "http://unix"+path, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, method, controlBaseURL(socketPath)+path, bodyReader)
 	if err != nil {
 		return err
 	}
@@ -220,4 +222,37 @@ func (c *Client) send(ctx context.Context, method, path string, payload any, out
 		return nil
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+func systemControlEndpoint() string {
+	if goruntime.GOOS == "windows" {
+		return "127.0.0.1:6768"
+	}
+	return "/run/zivko-dhcp/zivko-dhcp.sock"
+}
+
+func controlNetwork(endpoint string) string {
+	if goruntime.GOOS == "windows" {
+		return "tcp"
+	}
+	return "unix"
+}
+
+func controlBaseURL(endpoint string) string {
+	if controlNetwork(endpoint) == "tcp" {
+		return "http://" + endpoint
+	}
+	return "http://unix"
+}
+
+func controlTransport(endpoint string) http.RoundTripper {
+	if controlNetwork(endpoint) == "tcp" {
+		return &http.Transport{}
+	}
+	return &http.Transport{
+		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			var d net.Dialer
+			return d.DialContext(ctx, "unix", endpoint)
+		},
+	}
 }
